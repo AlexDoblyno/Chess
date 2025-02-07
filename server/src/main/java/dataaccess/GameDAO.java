@@ -1,20 +1,24 @@
 package dataaccess;
 
-import model.AuthData;
+import chess.*;
 import model.GameData;
-import model.UserData;
 
-import javax.xml.crypto.Data;
-import java.util.ArrayList;
+import java.util.List;
 
 public interface GameDAO {
     void clear() throws DataAccessException;
 
-    int createGame(GameData game) throws DataAccessException;
+    Integer createGame(String gameName) throws DataAccessException;
 
-    GameData getGame(int gameID) throws DataAccessException;
+    GameData getGame(Integer gameID) throws DataAccessException;
 
-    ArrayList<GameData> listGame() throws DataAccessException;
+    List<GameData> listGames() throws DataAccessException;
 
-    void updateGame(GameData data) throws DataAccessException;
+    void updateGame(ChessGame.TeamColor playerColor, Integer gameID, String username) throws DataAccessException;
+
+    void updateChessGame(ChessGame game, Integer gameID) throws DataAccessException;
+
+    Integer getSize() throws DataAccessException;
+
+    public Boolean verifyGame(Integer gameID) throws DataAccessException;
 }

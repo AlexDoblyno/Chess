@@ -1,88 +1,64 @@
 package service;
 
 import chess.ChessGame;
-import dataaccess.AuthDAO;
-import dataaccess.DataAccessException;
-import dataaccess.GameDAO;
-import model.AuthData;
+import dataaccess.*;
 import model.GameData;
-import com.google.gson.Gson;
-import model.JoinGameRequest;
 
-import java.util.Map;
-import java.util.Collection;
+import java.util.List;
 
 public class GameService {
-    GameDAO gameDAO;
-    AuthDAO authDAO;
-    int id;
+    private UserDAO userDAO;
+    private GameDAO gameDAO;
+    private AuthDAO authDAO;
 
-    public GameService(GameDAO gameDAO, AuthDAO authDAO) {
-        this.gameDAO = gameDAO;
+    public GameService(UserDAO userDAO, GameDAO gameDAO, AuthDAO authDAO) {
+        this.userDAO = userDAO;
         this.authDAO = authDAO;
+        this.gameDAO = gameDAO;
     }
 
-    public Collection<GameData> listGames(AuthData auth) throws DataAccessException {
-        var info = authDAO.getAuth(auth);
-        if (info == null) {
-            throw new DataAccessException("Error: unauthorized");
+    public void verifyAuthToken(String authToken) throws DataAccessException {
+        if (!authDAO.verifyAuthToken(authToken)) {
+            throw new DataAccessException("Invalid Auth Token");
         }
-        return gameDAO.listGame();
     }
 
-    public int createGame(String gameName, AuthData auth) throws DataAccessException {
-        var tempList = gameDAO.listGame();
-        for (int i = 0; i <= tempList.size(); i++) {
-            id++;
+    public List<GameData> listGames(String authToken) throws DataAccessException {
+        if (!authDAO.verifyAuthToken(authToken)) {
+            throw new DataAccessException("Invalid Auth Token");
         }
-
-        if (gameName == null) {
-            throw new DataAccessException("Error: bad request");
-        }
-
-        ChessGame board = new ChessGame();
-        GameData gameData = new GameData(id, null, null, gameName, board, false);
-
-        gameDAO.createGame(gameData);
-
-
-        return id;
+        return gameDAO.listGames();
     }
 
-    public void joinGame(JoinGameRequest info, AuthData auth) throws DataAccessException {
-        var authenticatedUser = authDAO.getAuth(auth);
-        if (authenticatedUser == null) {
-            throw new DataAccessException("Error: unauthorized");
-        }
-        if (info.gameID() == null) {
-            throw new DataAccessException("Error: bad request");
-        }
-        GameData data = gameDAO.getGame(info.gameID());
-        if (data == null) {
-            throw new DataAccessException("Error: bad request");
+    public Integer createGame(String gameName) throws DataAccessException {
+        if (gameName == null || gameName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Invalid parameter");
         }
 
-        if (info.playerColor() == null) {
-            throw new DataAccessException("Error: bad request");
-        }
-
-        if (info.playerColor().equals("BLACK") || info.playerColor().equals("black")) {
-            if (data.blackUsername() != null) {
-                throw new DataAccessException("Error: already taken");
-            }
-            GameData game = new GameData(data.gameID(), data.whiteUsername(), auth.username(), data.gameName(), data.game(), data.gameOver());
-            gameDAO.updateGame(game);
-        } else {
-            if (data.whiteUsername() != null) {
-                throw new DataAccessException("Error: already taken");
-            }
-            GameData game = new GameData(data.gameID(), auth.username(), data.blackUsername(), data.gameName(), data.game(), data.gameOver());
-            gameDAO.updateGame(game);
-        }
-
+        return gameDAO.createGame(gameName);
     }
 
-    public void clear() throws DataAccessException {
-        gameDAO.clear();
+    public void joinGame(String authToken, Integer gameID, ChessGame.TeamColor playerColor) throws Exception {
+        String username = authDAO.getUsername(authToken);
+        if (gameID == null) {
+            throw new IllegalArgumentException("Invalid gameID");
+        }
+        if (!gameDAO.verifyGame(gameID)) {
+            throw new IllegalArgumentException("Error: bad request");
+        }
+
+        GameData gameData = gameDAO.getGame(gameID);
+
+
+        if ((playerColor != ChessGame.TeamColor.WHITE) && (playerColor != ChessGame.TeamColor.BLACK)) {
+            throw new IllegalArgumentException("Error: Invalid team color");
+        }
+
+        if ((playerColor == ChessGame.TeamColor.WHITE && gameData.whiteUsername() != null)
+                || (playerColor == ChessGame.TeamColor.BLACK && gameData.blackUsername() != null)) {
+            throw new IllegalAccessException("Error: Player color already taken.");
+        }
+
+        gameDAO.updateGame(playerColor, gameID, username);
     }
 }

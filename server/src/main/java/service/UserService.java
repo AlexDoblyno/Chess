@@ -1,65 +1,36 @@
 package service;
 
-import dataaccess.*;
-import model.AuthData;
+import dataaccess.AuthDAO;
+import dataaccess.DataAccessException;
+import dataaccess.UserDAO;
 import model.UserData;
 import org.mindrot.jbcrypt.BCrypt;
 
-import javax.xml.crypto.Data;
-
 public class UserService {
-    UserDAO userDAO;
-    AuthDAO authDAO;
+    private final UserDAO userDAO;
+    private final AuthDAO authDAO;
 
     public UserService(UserDAO userDAO, AuthDAO authDAO) {
         this.userDAO = userDAO;
         this.authDAO = authDAO;
     }
 
-    public AuthData register(UserData user) throws DataAccessException {
-        if (user.username() == null || user.password() == null || user.email() == null) {
-            throw new DataAccessException("Error: bad request");
+    public String loginUser(String username, String password) throws DataAccessException {
+        if (username == null || password == null || username.isEmpty() || password.isEmpty()) {
+            throw new IllegalArgumentException("Username and password are required");
         }
-        UserData data = userDAO.getUser(user.username());
-        if (data != null) {
-            throw new DataAccessException("Error: already taken");
+        if (!userDAO.verifyUser(username)) {
+            throw new DataAccessException("No user found");
+        } else if (!BCrypt.checkpw(password, userDAO.getPassword(username))) {
+            throw new DataAccessException("Wrong password");
         }
-        String hashedPassword = BCrypt.hashpw(user.password(), BCrypt.gensalt());
-        UserData newUser = new UserData(user.username(), hashedPassword, user.email());
-        userDAO.createUser(newUser);
-        AuthData auth = authDAO.createAuth(newUser.username());
-        if (auth == null) {
-            throw new DataAccessException(("Error: bad request"));
-        }
-        return authDAO.getAuth(auth);
+        return authDAO.createAuthToken(username);
     }
 
-    public AuthData login(UserData user) throws DataAccessException {
-        var info = userDAO.getUser(user.username());
-        if (info == null) {
-            throw new DataAccessException("Error: unauthorized");
+    public void logoutUser(String token) throws DataAccessException {
+        if (!authDAO.verifyAuthToken(token)) {
+            throw new DataAccessException("Invalid token");
         }
-        String hashedPassword = info.password();
-        if (BCrypt.checkpw(user.password(), hashedPassword)) {
-            AuthData auth = authDAO.createAuth(user.username());
-            return authDAO.getAuth(auth);
-        } else {
-            throw new DataAccessException("Error: unauthorized");
-        }
-    }
-
-    public void logout(AuthData auth) throws DataAccessException {
-        if (auth == null) {
-            throw new DataAccessException(("Error: unauthorized"));
-        }
-        var info = authDAO.getAuth(auth);
-        if (info == null) {
-            throw new DataAccessException("Error: unauthorized");
-        }
-        authDAO.deleteAuth(auth);
-    }
-
-    public void clear() throws DataAccessException {
-        userDAO.clear();
+        authDAO.deleteAuthToken(token);
     }
 }

@@ -1,19 +1,15 @@
 package dataaccess;
 
-import model.AuthData;
-
-import javax.xml.crypto.Data;
-
 public interface AuthDAO {
     void clear() throws DataAccessException;
 
-    AuthData createAuth(String username) throws DataAccessException;
+    public String getUsername(String authToken) throws DataAccessException;
 
-    AuthData getAuth(AuthData auth) throws DataAccessException;
+    String createAuthToken(String username) throws DataAccessException;
 
-    String getUsername(AuthData auth) throws DataAccessException;
+    void deleteAuthToken(String authToken) throws DataAccessException;
 
-    void deleteAuth(AuthData auth) throws DataAccessException;
+    Integer getSize() throws DataAccessException;
 
-    int getDBSize() throws DataAccessException;
+    public Boolean verifyAuthToken(String authToken) throws DataAccessException;
 }

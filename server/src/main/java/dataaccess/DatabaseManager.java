@@ -1,12 +1,7 @@
 package dataaccess;
 
-import chess.ChessGame;
-import com.google.gson.Gson;
-
 import java.sql.*;
 import java.util.Properties;
-
-import static java.sql.Types.NULL;
 
 public class DatabaseManager {
     private static final String DATABASE_NAME;
@@ -53,35 +48,6 @@ public class DatabaseManager {
         }
     }
 
-    //LOOK INTO SQL COMMIT AND ROLLBACK
-
-    public static void configureDatabase() throws DataAccessException {
-        createDatabase();
-        var userStatement = "CREATE TABLE IF NOT EXISTS User (username varchar(255), password varchar(255), email varchar(255))";
-        var authStatement = "CREATE TABLE IF NOT EXISTS Auth (authToken varchar(255), username varchar(255))";
-        var gameStatement = "CREATE TABLE IF NOT EXISTS Game (`gameID` int NOT NULL, " +
-                "whiteUsername varchar(255), " +
-                "blackUsername varchar(255), " +
-                "gameName varchar(255), game text, " +
-                "PRIMARY KEY (gameID), " +
-                "gameOver BOOLEAN DEFAULT FALSE)";
-        try (var conn = DatabaseManager.getConnection()) {
-            try (var preparedStatement = conn.prepareStatement(userStatement)) {
-                preparedStatement.executeUpdate();
-            }
-            try (var preparedStatement = conn.prepareStatement(authStatement)) {
-                preparedStatement.executeUpdate();
-            }
-            try (var preparedStatement = conn.prepareStatement(gameStatement)) {
-                preparedStatement.executeUpdate();
-            }
-        } catch (SQLException e) {
-            throw new DataAccessException(e.getMessage());
-        }
-
-
-    }
-
     /**
      * Create a connection to the database and sets the catalog based upon the
      * properties specified in db.properties. Connections to the database should
@@ -99,6 +65,37 @@ public class DatabaseManager {
             var conn = DriverManager.getConnection(CONNECTION_URL, USER, PASSWORD);
             conn.setCatalog(DATABASE_NAME);
             return conn;
+        } catch (SQLException e) {
+            throw new DataAccessException(e.getMessage());
+        }
+    }
+
+    public static void createTables() throws DataAccessException {
+        createDatabase();
+        String createUserSql = "CREATE TABLE IF NOT EXISTS user (" +
+                "username VARCHAR(255) NOT NULL PRIMARY KEY, " +
+                "password VARCHAR(255) NOT NULL, " +
+                "email VARCHAR(255) NOT NULL)";
+        String createAuthSql = "CREATE TABLE IF NOT EXISTS auth (" +
+                "authToken VARCHAR(255) NOT NULL PRIMARY KEY, " +
+                "username VARCHAR(255) NOT NULL, " +
+                "FOREIGN KEY(username) REFERENCES user(username))";
+        String createGameSql = "CREATE TABLE IF NOT EXISTS game (" +
+                "gameId INTEGER NOT NULL PRIMARY KEY, " +
+                "gameName VARCHAR(255) NOT NULL, " +
+                "whiteUsername VARCHAR(255), " +
+                "blackUsername VARCHAR(255), " +
+                "chessGame TEXT, " +
+                "FOREIGN KEY(whiteUsername) REFERENCES user(username), " +
+                "FOREIGN KEY(blackUsername) REFERENCES user(username))";
+
+        try (Connection connection = getConnection();
+            var userStatement = connection.prepareStatement(createUserSql);
+            var authStatement = connection.prepareStatement(createAuthSql);
+            var gameStatement = connection.prepareStatement(createGameSql)) {
+            userStatement.executeUpdate();
+            authStatement.executeUpdate();
+            gameStatement.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException(e.getMessage());
         }
