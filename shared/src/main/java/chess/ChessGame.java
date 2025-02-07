@@ -3,27 +3,7 @@ package chess;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static chess.ChessPiece.PieceType.ROOK;
-import static java.lang.Math.abs;
 
-/**
- * For a class that can manage a chess game, making moves on a board
- * <p>
- * Note: You can add to this class, but you may not alter
- * signature of the existing methods.
- */
-public class ChessGame {
-
-    private ChessBoard gameBoard;
-    private TeamColor turnTeam;
-
-    private boolean gameOver;
-
-    // Variables for special moves
-    private Boolean blackKingMoved = false;
-    private Boolean whiteKingMoved = false;
-    private Boolean blackLeftRookMoved = false;
-    private Boolean whiteLeftRookMoved = false;
     private Boolean blackRightRookMoved = false;
     private Boolean whiteRightRookMoved = false;
     private ChessPosition pawnMovedTwo = null;
@@ -263,62 +243,4 @@ public class ChessGame {
         pawnMovedTwo = null;
     }
 
-    // Used to set special moves variables (mainly to keep track of if kings and rooks have moved, as well as keep
-    // track of the pawn that just moved two)
-    private void checkMove(ChessMove move) {
-        ChessPiece piece = gameBoard.getPiece(move.getStartPosition());
-        switch (piece.getPieceType()) {
-            case PAWN:
-                if (abs(move.getStartPosition().getRow() - move.getEndPosition().getRow()) == 2) {
-                    pawnMovedTwo = move.getEndPosition();
-                }
-                break;
-            case ROOK:
-                if (piece.getTeamColor() == TeamColor.BLACK && move.getStartPosition().getRow() == 8) {
-                    if (move.getStartPosition().getColumn() == 1) {
-                        blackLeftRookMoved = true;
-                    } else if (move.getStartPosition().getColumn() == 8) {
-                        blackRightRookMoved = true;
-                    }
-                } else if (piece.getTeamColor() == TeamColor.WHITE && move.getStartPosition().getRow() == 1) {
-                    if (move.getStartPosition().getColumn() == 1) {
-                        whiteLeftRookMoved = true;
-                    } else if (move.getStartPosition().getColumn() == 8) {
-                        whiteRightRookMoved = true;
-                    }
-                }
-                break;
-            case KING:
-                if (piece.getTeamColor() == TeamColor.BLACK && move.getStartPosition()
-                        .getRow() == 8 && move.getStartPosition().getColumn() == 5) {
-                    blackKingMoved = true;
-                } else if (piece.getTeamColor() == TeamColor.WHITE && move.getStartPosition()
-                        .getRow() == 1 && move.getStartPosition().getColumn() == 5) {
-                    whiteKingMoved = true;
-                }
-                break;
-            default:
-                break;
-        }
-    }
 
-    public Boolean isOver() {
-        if (isInStalemate(TeamColor.BLACK) || isInStalemate(TeamColor.WHITE)
-            || (isInCheckmate(TeamColor.BLACK) && turnTeam.equals(TeamColor.BLACK))
-            || (isInCheckmate(TeamColor.WHITE) && turnTeam.equals(TeamColor.WHITE))) {
-            gameOver = true;
-        }
-        return gameOver;
-    }
-
-    public void setGameOver(boolean gameOver) {
-        this.gameOver = gameOver;
-    }
-
-    /**
-     * Enum identifying the 2 possible teams in a chess game
-     */
-    public enum TeamColor {
-        WHITE, BLACK
-    }
-}
