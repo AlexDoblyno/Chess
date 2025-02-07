@@ -14,14 +14,8 @@ public class ChessPosition {
     private final int col;
 
     public ChessPosition(int row, int col) {
-        //if (row < 1 || row > 8 || col < 1 || col > 8) { throw new IllegalArgumentException("This piece isn't on the board!"); }
-
         this.row = row;
         this.col = col;
-    }
-
-    public boolean checkBounds() {
-        return !(row < 1 || row > 8 || col < 1 || col > 8);
     }
 
     /**
@@ -38,6 +32,10 @@ public class ChessPosition {
      */
     public int getColumn() {
         return col;
+    }
+
+    public Boolean outsideBounds() {
+        return (row > 8 || row < 1 || col > 8 || col < 1);
     }
 
     @Override
@@ -59,9 +57,6 @@ public class ChessPosition {
 
     @Override
     public String toString() {
-        return "ChessPosition{" +
-                "row=" + row +
-                ", col=" + col +
-                '}';
+        return "[" + row + "," + col + ']';
     }
 }
