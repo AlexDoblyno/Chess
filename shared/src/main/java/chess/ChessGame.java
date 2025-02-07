@@ -3,7 +3,27 @@ package chess;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import static chess.ChessPiece.PieceType.ROOK;
+import static java.lang.Math.abs;
 
+/**
+ * For a class that can manage a chess game, making moves on a board
+ * <p>
+ * Note: You can add to this class, but you may not alter
+ * signature of the existing methods.
+ */
+public class ChessGame {
+
+    private ChessBoard gameBoard;
+    private TeamColor turnTeam;
+
+    private boolean gameOver;
+
+    // Variables for special moves
+    private Boolean blackKingMoved = false;
+    private Boolean whiteKingMoved = false;
+    private Boolean blackLeftRookMoved = false;
+    private Boolean whiteLeftRookMoved = false;
     private Boolean blackRightRookMoved = false;
     private Boolean whiteRightRookMoved = false;
     private ChessPosition pawnMovedTwo = null;
@@ -142,105 +162,7 @@ import java.util.Collection;
         turnTeam = (turnTeam == TeamColor.WHITE) ? TeamColor.BLACK : TeamColor.WHITE;
     }
 
-    /**
-     * Determines if the given team is in check
-     *
-     * @param teamColor which team to check for check
-     * @return True if the specified team is in check
-     */
-    public boolean isInCheck(TeamColor teamColor) {
-        Collection<ChessPosition> enemyPositions = gameBoard.getPieces(
-                (teamColor == TeamColor.BLACK) ? TeamColor.WHITE : TeamColor.BLACK);
-        for (ChessPosition position : enemyPositions) {
-            if (gameBoard.getPiece(position).canKillKing(gameBoard, position)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // Check if the piece of teamColor in position piecePosition is in danger (used for castling)
-    public boolean isInDanger(TeamColor teamColor, ChessPosition piecePosition) {
-        Collection<ChessPosition> enemyPositions = gameBoard.getPieces(
-                (teamColor == TeamColor.BLACK) ? TeamColor.WHITE : TeamColor.BLACK);
-        for (ChessPosition position : enemyPositions) {
-            if (gameBoard.getPiece(position).canKillPiece(gameBoard, position, piecePosition)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Determines if the given team is in checkmate
-     *
-     * @param teamColor which team to check for checkmate
-     * @return True if the specified team is in checkmate
-     */
-    public boolean isInCheckmate(TeamColor teamColor) {
-        if (!isInCheck(teamColor)) {
-            return false;
-        }
-        Collection<ChessPosition> team = gameBoard.getPieces(teamColor);
-        for (ChessPosition position : team) {
-            Collection<ChessMove> moves = validMoves(position);
-            for (ChessMove move : moves) {
-                ChessPiece capturedPiece = gameBoard.doMove(move);
-                if (!isInCheck(teamColor)) {
-                    gameBoard.undoMove(move, capturedPiece);
-                    return false;
-                } else {
-                    gameBoard.undoMove(move, capturedPiece);
-                }
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Determines if the given team is in stalemate, which here is defined as having
-     * no valid moves
-     *
-     * @param teamColor which team to check for stalemate
-     * @return True if the specified team is in stalemate, otherwise false
-     */
-    public boolean isInStalemate(TeamColor teamColor) {
-        if (isInCheck(teamColor)) {
-            return false;
-        }
-        Collection<ChessPosition> team = gameBoard.getPieces(teamColor);
-        for (ChessPosition position : team) {
-            Collection<ChessMove> moves = validMoves(position);
-            if (!moves.isEmpty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Gets the current chessboard
-     *
-     * @return the chessboard
-     */
-    public ChessBoard getBoard() {
-        return gameBoard;
-    }
-
-    /**
-     * Sets this game's chessboard with a given board
-     *
-     * @param board the new board to use
-     */
-    public void setBoard(ChessBoard board) {
-        gameBoard = board;
-        blackKingMoved = false;
-        whiteKingMoved = false;
-        blackLeftRookMoved = false;
-        whiteLeftRookMoved = false;
-        blackRightRookMoved = false;
-        whiteRightRookMoved = false;
         pawnMovedTwo = null;
     }
-
+}
 
