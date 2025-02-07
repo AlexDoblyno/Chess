@@ -1,24 +1,19 @@
 package client;
 
 import chess.ChessGame;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import dataaccess.DataAccessException;
-import dataaccess.GameDAO;
-import dataaccess.SqlGameDAO;
-import exception.ResponseException;
-import model.*;
-import serverfacade.ServerFacade;
 import org.junit.jupiter.api.*;
 import server.Server;
-
-import static org.junit.jupiter.api.Assertions.*;
+import client.*;
+import ui.ServerFacade;
 
 
 public class ServerFacadeTests {
-    public ServerFacade serverFacade;
 
-    private GameDAO gameDAO;
     private static Server server;
-
+    private ServerFacade serverFacade;
     private static int port;
 
     @BeforeAll
@@ -33,172 +28,99 @@ public class ServerFacadeTests {
         server.stop();
     }
 
+
     @BeforeEach
-    public void setup() throws ResponseException {
-        var serverUrl = "http://localhost:" + port;
-        this.serverFacade = new ServerFacade(serverUrl);
-        GameData gameData;
-        AuthData authData;
-        UserData userData;
-        serverFacade.clear();
-
-        this.gameDAO = new SqlGameDAO();
-
+    public void setup() throws DataAccessException {
+        serverFacade = new ServerFacade(Integer.toString(port));
+        server.clear();
     }
 
-
+    // Test for playGame with a successful response
     @Test
-    public void sampleTest() {
-        Assertions.assertTrue(true);
+    public void testPlayGameSuccess() throws Exception {
+        JsonObject jsonObject = JsonParser.parseString(serverFacade.registerUser("sam", "sam", "sam")).getAsJsonObject();
+        String authToken = jsonObject.get("authToken").getAsString();
+        serverFacade.createGame("new", authToken);
+        Assertions.assertTrue(serverFacade.playGame("1", ChessGame.TeamColor.BLACK, authToken).isEmpty());
     }
 
+    // Test for playGame with an invalid game ID
     @Test
-    public void clearAll() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-        ChessGame game = new ChessGame();
-
-        GameData testData = new GameData(5, null, null, "testGame", game, false);
-        serverFacade.createGame(testData, testAuth);
-
-        serverFacade.clear();
-
-        UserData anotherTestUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData anotherTestAuth = serverFacade.registerUser(anotherTestUser);
-        GameList list = serverFacade.listGames(anotherTestAuth);
-        assert (list.toString().equals("GameList[games=[]]"));
+    public void testPlayGameInvalidGameID() throws Exception {
+        JsonObject jsonObject = JsonParser.parseString(serverFacade.registerUser("sam", "sam", "sam")).getAsJsonObject();
+        String authToken = jsonObject.get("authToken").getAsString();
+        Assertions.assertFalse(serverFacade.playGame("1", ChessGame.TeamColor.BLACK, authToken).isEmpty());
     }
 
+    // Test for createGame with a successful response
     @Test
-    public void registerUserSuccess() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-
-        assertNotNull(testAuth);
+    public void testCreateGameSuccess() throws Exception {
+        JsonObject jsonObject = JsonParser.parseString(serverFacade.registerUser("sam", "sam", "sam")).getAsJsonObject();
+        String authToken = jsonObject.get("authToken").getAsString();
+        Assertions.assertTrue(serverFacade.createGame("new", authToken).contains("gameID"));
     }
 
+    // Test for createGame with an invalid auth token
     @Test
-    public void registerUserFail() {
-        UserData testUser = new UserData(null, null, null);
-
-        assertThrows(ResponseException.class, () -> serverFacade.registerUser(testUser));
+    public void testCreateGameInvalidAuthToken() throws Exception {
+        Assertions.assertFalse(serverFacade.createGame("new", "authToken").contains("gameID"));
     }
 
+    // Test for listGames with a successful response
     @Test
-    public void loginUserSuccess() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        serverFacade.registerUser(testUser);
-
-        AuthData testAuth = serverFacade.loginUser(testUser);
-        assertNotNull(testAuth);
+    public void testListGamesSuccess() throws Exception {
+        JsonObject jsonObject = JsonParser.parseString(serverFacade.registerUser("sam", "sam", "sam")).getAsJsonObject();
+        String authToken = jsonObject.get("authToken").getAsString();
+        serverFacade.createGame("newGame", authToken);
+        Assertions.assertTrue(serverFacade.listGames(authToken).contains("newGame"));
     }
 
+    // Test for listGames with an invalid auth token
     @Test
-    public void loginUserFail() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        serverFacade.registerUser(testUser);
-        AuthData failUser = new AuthData(null, "testPassword");
-
-        assertThrows(ResponseException.class, () -> serverFacade.logoutUser(failUser));
+    public void testListGamesInvalidAuthToken() throws Exception {
+        serverFacade.createGame("newGame", "authToken");
+        Assertions.assertFalse(serverFacade.listGames("authToken").contains("newGame"));
     }
 
+    // Test for logout with a successful response
     @Test
-    public void logoutUserSuccess() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-
-        serverFacade.logoutUser(testAuth);
-        assertThrows(ResponseException.class, () -> serverFacade.listGames(testAuth));
+    public void testLogoutSuccess() throws Exception {
+        JsonObject jsonObject = JsonParser.parseString(serverFacade.registerUser("sam", "sam", "sam")).getAsJsonObject();
+        String authToken = jsonObject.get("authToken").getAsString();
+        Assertions.assertTrue(serverFacade.logout(authToken).isEmpty());
     }
 
+    // Test for logout with an invalid auth token
     @Test
-    public void logoutUserFail() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-
-        AuthData failAuth = new AuthData(null, null);
-
-        assertThrows(ResponseException.class, () -> serverFacade.logoutUser(failAuth));
+    public void testLogoutInvalidAuthToken() throws Exception {
+        Assertions.assertFalse(serverFacade.logout("authToken").isEmpty());
     }
 
+    // Test for registerUser with a successful response
     @Test
-    public void listGamesSuccess() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-
-        ChessGame game = new ChessGame();
-        GameData testData = new GameData(5, null, null, "testGame", game, false);
-        serverFacade.createGame(testData, testAuth);
-
-        assertNotNull(serverFacade.listGames(testAuth));
+    public void testRegisterUserSuccess() throws Exception {
+        Assertions.assertTrue(serverFacade.registerUser("sam", "sam", "sam").contains("authToken"));
     }
 
+    // Test for registerUser with missing fields
     @Test
-    public void listGamesFail() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-
-        ChessGame game = new ChessGame();
-        GameData testData = new GameData(5, null, null, "testGame", game, false);
-        serverFacade.createGame(testData, testAuth);
-
-        AuthData failAuth = new AuthData(null, null);
-
-        assertThrows(ResponseException.class, () -> serverFacade.listGames(failAuth));
+    public void testRegisterUserTwice() throws Exception {
+        serverFacade.registerUser("sam", "sam", "sam");
+        Assertions.assertFalse(serverFacade.registerUser("sam", "sam", "sam").contains("authToken"));
     }
 
+    // Test for login with a successful response
     @Test
-    public void createGameSuccess() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-
-        ChessGame game = new ChessGame();
-        GameData testData = new GameData(5, null, null, "testGame", game, false);
-
-        assertNotNull(serverFacade.listGames(testAuth));
+    public void testLoginSuccess() throws Exception {
+        String authToken = serverFacade.registerUser("sam", "sam", "sam");
+        serverFacade.logout(authToken);
+        Assertions.assertTrue(serverFacade.login("sam", "sam").contains("authToken"));
     }
 
+    // Test for login with invalid credentials
     @Test
-    public void createGameFail() throws ResponseException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-        ChessGame game = new ChessGame();
-        GameData testData = new GameData(5, null, null, "testGame", game, false);
-
-        AuthData failAuth = new AuthData(null, null);
-        assertThrows(ResponseException.class, () -> serverFacade.createGame(testData, failAuth));
-    }
-
-    @Test
-    public void joinGameSuccess() throws ResponseException, DataAccessException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-
-        GameData testData = new GameData(5, null, null, "testGame", null, false);
-
-        int id = gameDAO.createGame(testData);
-        JoinGameRequest join = new JoinGameRequest(id, testUser.username(), "WHITE");
-
-        serverFacade.joinGame(join, testAuth);
-
-        assertNotNull(serverFacade.listGames(testAuth));
-
-    }
-
-    @Test
-    public void joinGameFail() throws ResponseException, DataAccessException {
-        UserData testUser = new UserData("testUser", "testPassword", "testEmail");
-        AuthData testAuth = serverFacade.registerUser(testUser);
-
-        ChessGame game = new ChessGame();
-        GameData testData = new GameData(0, null, null, "testGame", game, false);
-
-        int id = gameDAO.createGame(testData);
-
-        JoinGameRequest join = new JoinGameRequest(id, "testUser", "WHITE");
-        serverFacade.joinGame(join, testAuth);
-
-        assertThrows(ResponseException.class, () -> serverFacade.joinGame(join, testAuth));
+    public void testLoginInvalidCredentials() throws Exception {
+        Assertions.assertFalse(serverFacade.login("sam", "sam").contains("authToken"));
     }
 
 }
