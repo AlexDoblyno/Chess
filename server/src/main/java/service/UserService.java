@@ -1,36 +1,43 @@
 package service;
 
-import dataaccess.AuthDAO;
+import dataaccess.exceptions.*;
 import dataaccess.DataAccessException;
-import dataaccess.UserDAO;
-import model.UserData;
+import dataaccess.DAO.UserDAO;
+import model.*;
 import org.mindrot.jbcrypt.BCrypt;
 
 public class UserService {
     private final UserDAO userDAO;
-    private final AuthDAO authDAO;
 
-    public UserService(UserDAO userDAO, AuthDAO authDAO) {
+    public UserService(UserDAO userDAO) {
         this.userDAO = userDAO;
-        this.authDAO = authDAO;
     }
 
-    public String loginUser(String username, String password) throws DataAccessException {
-        if (username == null || password == null || username.isEmpty() || password.isEmpty()) {
-            throw new IllegalArgumentException("Username and password are required");
+    public UserData createUser(UserData user) throws UserExistsException, BadRequestException, DataAccessException {
+        UserData checkUsername = userDAO.getUser(user.username());
+
+        if (checkUsername != null) {
+            throw new UserExistsException("already exists");
         }
-        if (!userDAO.verifyUser(username)) {
-            throw new DataAccessException("No user found");
-        } else if (!BCrypt.checkpw(password, userDAO.getPassword(username))) {
-            throw new DataAccessException("Wrong password");
+        else if (user.password() == null || user.password().isEmpty()) {
+            throw new BadRequestException("bad request");
         }
-        return authDAO.createAuthToken(username);
+        else {
+            userDAO.createUser(user);
+            return userDAO.getUser(user.username());
+        }
     }
 
-    public void logoutUser(String token) throws DataAccessException {
-        if (!authDAO.verifyAuthToken(token)) {
-            throw new DataAccessException("Invalid token");
+    public void validateUser(UserData user) throws UnauthorizedException, DataAccessException {
+        UserData validateUser = userDAO.getUser(user.username());
+
+        if (validateUser == null || !BCrypt.checkpw(user.password(), validateUser.password())) {
+            throw new UnauthorizedException("unauthorized");
         }
-        authDAO.deleteAuthToken(token);
     }
+
+    public void clear() throws BadRequestException, DataAccessException {
+        userDAO.clear();
+    }
+
 }
